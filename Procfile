@@ -1,1 +1,1 @@
-web: gunicorn YOLOv12.app:app 
+web: gunicorn YOLOv12.app:app
