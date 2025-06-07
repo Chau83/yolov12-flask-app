@@ -1,0 +1,1 @@
+web: gunicorn YOLOv12.app:app 

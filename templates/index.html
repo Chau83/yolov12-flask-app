@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLOv12s Object Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        .drop-zone {
+            border: 2px dashed #4a5568;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover {
+            border-color: #2d3748;
+            background-color: #f7fafc;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">YOLOv12s Object Detection</h1>
+        
+        <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <div class="drop-zone rounded-lg p-8 text-center mb-6" id="dropZone">
+                <input type="file" id="fileInput" class="hidden" accept="image/*">
+                <div class="text-gray-600">
+                    <p class="mb-2">Drag and drop an image here or</p>
+                    <button class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600" onclick="document.getElementById('fileInput').click()">
+                        Select Image
+                    </button>
+                </div>
+            </div>
+
+            <div id="result" class="hidden">
+                <div class="mb-4">
+                    <img id="resultImage" class="max-w-full rounded-lg shadow" alt="Detection Result">
+                </div>
+                <div id="detectionList" class="space-y-2">
+                    <!-- Detection results will be displayed here -->
+                </div>
+            </div>
+
+            <div id="loading" class="hidden text-center py-4">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+                <p class="mt-2 text-gray-600">Processing image...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const result = document.getElementById('result');
+        const resultImage = document.getElementById('resultImage');
+        const detectionList = document.getElementById('detectionList');
+        const loading = document.getElementById('loading');
+
+        // Handle drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-blue-500');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-blue-500');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-blue-500');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                handleImage(file);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleImage(file);
+            }
+        });
+
+        function handleImage(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            loading.classList.remove('hidden');
+            result.classList.add('hidden');
+
+            fetch('/detect', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                // Display the processed image
+                resultImage.src = 'data:image/png;base64,' + btoa(data.image);
+                
+                // Display detection results
+                detectionList.innerHTML = data.detections.map(det => `
+                    <div class="bg-gray-50 p-3 rounded">
+                        <p class="font-semibold">${det.class}</p>
+                        <p class="text-sm text-gray-600">Confidence: ${(det.confidence * 100).toFixed(2)}%</p>
+                    </div>
+                `).join('');
+
+                result.classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing the image.');
+            })
+            .finally(() => {
+                loading.classList.add('hidden');
+            });
+        }
+    </script>
+</body>
+</html> 
